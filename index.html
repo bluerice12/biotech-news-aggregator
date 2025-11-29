@@ -199,6 +199,11 @@
         background-color: #3a7bd5;
     }
 
+    .load-more-btn:disabled {
+        background-color: #666;
+        cursor: not-allowed;
+    }
+
     .source-badge {
         display: inline-block;
         padding: 3px 6px;
@@ -207,6 +212,13 @@
         font-weight: 600;
         background-color: #333;
         color: #ddd;
+    }
+
+    .scroll-indicator {
+        text-align: center;
+        padding: 10px;
+        font-size: 13px;
+        color: #aaa;
     }
 
     @media (max-width: 768px) {
@@ -274,12 +286,16 @@
     </table>
     
     <div class="load-more">
-        <button id="loadMoreBtn" class="load-more-btn">Load More Articles</button>
+        <button id="loadEarlierBtn" class="load-more-btn">Load Earlier Articles</button>
     </div>
     
     <div id="loading" class="loading-container">
         <div class="spinner"></div>
         <div>Loading latest pharma and biotech news...</div>
+    </div>
+    
+    <div id="scrollIndicator" class="scroll-indicator" style="display: none;">
+        Loading more articles...
     </div>
 </div>
 
@@ -288,14 +304,6 @@
    RSS SOURCES
 -------------------- */
 const feeds = [
-    { 
-        name: "FiercePharma", 
-        url: "https://www.fiercepharma.com/fiercepharmacom/rss-feeds" 
-    },
-    { 
-        name: "FierceBiotech", 
-        url: "https://www.fiercebiotech.com/fiercebiotechcom/rss-feeds" 
-    },
     { 
         name: "BioSpace", 
         url: "https://www.biospace.com/index.rss" 
@@ -307,10 +315,6 @@ const feeds = [
     { 
         name: "PhRMA", 
         url: "https://www.phrma.org/rss" 
-    },
-    { 
-        name: "Nature Reviews Drug Discovery", 
-        url: "https://feeds.nature.com/nrd/rss/current" 
     }
 ];
 
@@ -324,6 +328,9 @@ const batchSize = 20;
 let isLoading = false;
 let lastUpdated = null;
 let refreshInterval;
+let isFetchingEarlier = false;
+let currentPage = 1;
+const itemsPerPage = 50;
 
 /* --------------------
    CACHING
@@ -582,7 +589,7 @@ function clean(t) {
 -------------------- */
 function showMore() {
     const tbody = document.querySelector("#newsTable tbody");
-    const loadMoreBtn = document.getElementById('loadMoreBtn');
+    const loadEarlierBtn = document.getElementById('loadEarlierBtn');
     
     for (let i = shown; i < shown + batchSize && i < filteredItems.length; i++) {
         const row = filteredItems[i];
@@ -600,11 +607,11 @@ function showMore() {
     }
     shown += batchSize;
     
-    // Show/hide load more button
+    // Show/hide load earlier button
     if (shown >= filteredItems.length) {
-        loadMoreBtn.style.display = 'none';
+        loadEarlierBtn.style.display = 'none';
     } else {
-        loadMoreBtn.style.display = 'inline-block';
+        loadEarlierBtn.style.display = 'inline-block';
     }
 }
 
@@ -629,6 +636,65 @@ function formatDate(date) {
 }
 
 /* --------------------
+   INFINITE SCROLL
+-------------------- */
+function setupInfiniteScroll() {
+    window.addEventListener('scroll', () => {
+        // Check if we're near the bottom of the page
+        if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500) {
+            loadMoreOnScroll();
+        }
+    });
+}
+
+async function loadMoreOnScroll() {
+    // Don't trigger if we're already loading or if there's nothing more to load
+    if (isFetchingEarlier || shown >= filteredItems.length) return;
+    
+    isFetchingEarlier = true;
+    
+    // Show loading indicator
+    const scrollIndicator = document.getElementById('scrollIndicator');
+    scrollIndicator.style.display = 'block';
+    
+    // Simulate loading delay for better UX
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Load more items
+    showMore();
+    
+    // Hide loading indicator
+    scrollIndicator.style.display = 'none';
+    isFetchingEarlier = false;
+}
+
+/* --------------------
+   LOAD EARLIER ARTICLES
+-------------------- */
+async function loadEarlierArticles() {
+    // Don't trigger if we're already loading or if there's nothing more to load
+    if (isFetchingEarlier || shown >= filteredItems.length) return;
+    
+    isFetchingEarlier = true;
+    
+    // Disable button while loading
+    const loadEarlierBtn = document.getElementById('loadEarlierBtn');
+    loadEarlierBtn.disabled = true;
+    loadEarlierBtn.textContent = 'Loading...';
+    
+    // Simulate loading delay for better UX
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    // Load more items
+    showMore();
+    
+    // Re-enable button
+    loadEarlierBtn.disabled = false;
+    loadEarlierBtn.textContent = 'Load Earlier Articles';
+    isFetchingEarlier = false;
+}
+
+/* --------------------
    EVENT LISTENERS
 -------------------- */
 document.getElementById('search').addEventListener('input', () => {
@@ -639,12 +705,13 @@ document.getElementById('sourceFilter').addEventListener('change', () => {
     processItems();
 });
 
-document.getElementById('loadMoreBtn').addEventListener('click', () => {
-    showMore();
+document.getElementById('loadEarlierBtn').addEventListener('click', () => {
+    loadEarlierArticles();
 });
 
 // Initialize
 loadFeeds();
+setupInfiniteScroll();
 
 // Auto-refresh every 5 minutes
 refreshInterval = setInterval(() => {
