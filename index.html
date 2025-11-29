@@ -13,6 +13,9 @@
         --header-bg: #1e1e1e;
         --hover-bg: #2a2a2a;
         --accent: #4a90e2;
+        --success: #4CAF50;
+        --warning: #ff9800;
+        --error: #f44336;
     }
 
     body {
@@ -163,9 +166,18 @@
     }
 
     .error {
-        color: #f44336;
+        color: var(--error);
         padding: 8px 12px;
         background-color: rgba(244, 67, 54, 0.1);
+        border-radius: 4px;
+        margin: 8px 0;
+        font-size: 13px;
+    }
+
+    .success {
+        color: var(--success);
+        padding: 8px 12px;
+        background-color: rgba(76, 175, 80, 0.1);
         border-radius: 4px;
         margin: 8px 0;
         font-size: 13px;
@@ -221,6 +233,33 @@
         color: #aaa;
     }
 
+    .feed-status {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 10px;
+        font-size: 12px;
+    }
+
+    .status-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        border-radius: 12px;
+        background: var(--header-bg);
+    }
+
+    .status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+    }
+
+    .status-loading { background: var(--warning); }
+    .status-success { background: var(--success); }
+    .status-error { background: var(--error); }
+
     @media (max-width: 768px) {
         body {
             padding: 8px;
@@ -248,6 +287,10 @@
             align-items: flex-start;
             gap: 8px;
         }
+        
+        .feed-status {
+            flex-direction: column;
+        }
     }
 </style>
 </head>
@@ -266,6 +309,8 @@
             </div>
         </div>
     </header>
+
+    <div id="feedStatus" class="feed-status"></div>
 
     <div class="controls">
         <input type="text" id="search" placeholder="Search articles...">
@@ -286,7 +331,7 @@
     </table>
     
     <div class="load-more">
-        <button id="loadEarlierBtn" class="load-more-btn">Load Earlier Articles</button>
+        <button id="loadEarlierBtn" class="load-more-btn" style="display: none;">Load Earlier Articles</button>
     </div>
     
     <div id="loading" class="loading-container">
@@ -313,8 +358,12 @@ const feeds = [
         url: "https://www.pharmexec.com/rss" 
     },
     { 
-        name: "PhRMA", 
-        url: "https://www.phrma.org/rss" 
+        name: "BioPharma Dive", 
+        url: "https://www.biopharmadive.com/feeds/news/" 
+    },
+    { 
+        name: "Nature Reviews Drug Discovery", 
+        url: "https://www.nature.com/nrd.rss" 
     }
 ];
 
@@ -329,8 +378,7 @@ let isLoading = false;
 let lastUpdated = null;
 let refreshInterval;
 let isFetchingEarlier = false;
-let currentPage = 1;
-const itemsPerPage = 50;
+let feedStatus = {};
 
 /* --------------------
    CACHING
@@ -352,15 +400,62 @@ function setCachedFeeds(data) {
 }
 
 /* --------------------
+   UTILITY FUNCTIONS
+-------------------- */
+function timeout(ms, promise) {
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+            reject(new Error(`Request timed out after ${ms}ms`));
+        }, ms);
+
+        promise
+            .then(value => {
+                clearTimeout(timer);
+                resolve(value);
+            })
+            .catch(reason => {
+                clearTimeout(timer);
+                reject(reason);
+            });
+    });
+}
+
+function updateFeedStatus(feedName, status, message = '') {
+    feedStatus[feedName] = { status, message };
+    renderFeedStatus();
+}
+
+function renderFeedStatus() {
+    const container = document.getElementById('feedStatus');
+    container.innerHTML = '';
+    
+    Object.entries(feedStatus).forEach(([name, status]) => {
+        const item = document.createElement('div');
+        item.className = 'status-item';
+        
+        const dot = document.createElement('div');
+        dot.className = `status-dot status-${status.status}`;
+        
+        const text = document.createElement('span');
+        text.textContent = name;
+        
+        item.appendChild(dot);
+        item.appendChild(text);
+        container.appendChild(item);
+    });
+}
+
+/* --------------------
    LOAD ALL FEEDS
 -------------------- */
 async function loadFeeds() {
     const cached = getCachedFeeds();
-    if (cached) {
+    if (cached && cached.length > 0) {
         allItems = cached;
         processItems();
-        // Still refresh in background
-        refreshFeeds();
+        showSuccess('Loaded from cache');
+        // Refresh in background
+        setTimeout(refreshFeeds, 1000);
         return;
     }
 
@@ -371,17 +466,53 @@ async function refreshFeeds() {
     isLoading = true;
     updateLoadingState();
     
-    // Clear previous items
+    // Reset feed status
+    feeds.forEach(feed => {
+        updateFeedStatus(feed.name, 'loading');
+    });
+    
+    // Clear previous items but keep cache for fallback
+    const previousItems = [...allItems];
     allItems = [];
     
-    const feedPromises = feeds.map(feed => loadSingleFeed(feed));
-    await Promise.allSettled(feedPromises);
+    // Load feeds sequentially with delays to avoid overwhelming
+    let successCount = 0;
+    
+    for (let i = 0; i < feeds.length; i++) {
+        const feed = feeds[i];
+        
+        try {
+            const result = await loadSingleFeed(feed);
+            if (result && result.length > 0) {
+                successCount++;
+                updateFeedStatus(feed.name, 'success');
+            } else {
+                updateFeedStatus(feed.name, 'error', 'No articles found');
+            }
+            
+            // Small delay between requests
+            if (i < feeds.length - 1) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        } catch (error) {
+            console.error(`Failed to load ${feed.name}:`, error);
+            updateFeedStatus(feed.name, 'error', error.message);
+        }
+    }
+    
+    // If no feeds loaded successfully, restore from cache/previous
+    if (allItems.length === 0 && previousItems.length > 0) {
+        allItems = previousItems;
+        showError('Using cached data - feeds unavailable');
+    }
     
     // Sort by date (newest first)
     allItems.sort((a, b) => b.date - a.date);
     
     // Cache the results
-    setCachedFeeds(allItems);
+    if (allItems.length > 0) {
+        setCachedFeeds(allItems);
+    }
     
     // Update timestamp
     lastUpdated = new Date();
@@ -389,80 +520,87 @@ async function refreshFeeds() {
     
     isLoading = false;
     processItems();
+    
+    if (successCount > 0) {
+        showSuccess(`Loaded ${successCount}/${feeds.length} feeds successfully`);
+    }
 }
 
 async function loadSingleFeed(feed) {
-    try {
-        // Try different proxy approach if one fails
-        const proxyUrls = [
-            `https://api.allorigins.win/get?url=${encodeURIComponent(feed.url)}`,
-            `https://corsproxy.io/?${encodeURIComponent(feed.url)}`
-        ];
-        
-        let data;
-        for (const proxyUrl of proxyUrls) {
-            try {
-                const res = await fetch(proxyUrl);
-                if (res.ok) {
-                    data = await res.json();
-                    break;
-                }
-            } catch (e) {
-                console.log(`Proxy ${proxyUrl} failed for ${feed.name}`);
+    const PROXY_TIMEOUT = 10000; // 10 seconds
+    
+    // Try different proxy approaches
+    const proxyAttempts = [
+        // Direct CORS proxy
+        `https://corsproxy.io/?${encodeURIComponent(feed.url)}`,
+        // Alternative proxy
+        `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(feed.url)}`,
+        // AllOrigins as fallback
+        `https://api.allorigins.win/get?url=${encodeURIComponent(feed.url)}`
+    ];
+    
+    for (const proxyUrl of proxyAttempts) {
+        try {
+            console.log(`Trying proxy: ${proxyUrl}`);
+            const response = await timeout(PROXY_TIMEOUT, fetch(proxyUrl));
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
             }
-        }
-        
-        if (!data) {
-            throw new Error(`All proxies failed for ${feed.name}`);
-        }
-        
-        const parser = new DOMParser();
-        const xmlText = data.contents || data;
-        const xml = parser.parseFromString(xmlText, "text/xml");
-
-        // Check for parsing errors
-        if (xml.querySelector('parsererror')) {
-            throw new Error('XML parsing error');
-        }
-
-        // Handle different RSS formats
-        let items = xml.querySelectorAll("item");
-        if (items.length === 0) {
-            items = xml.querySelectorAll("entry"); // For Atom feeds
-        }
-        
-        // Handle RDF format for Nature
-        if (items.length === 0) {
-            items = xml.querySelectorAll("item"); // For RDF feeds
-        }
-
-        const entries = [...items].map(item => {
-            const title = item.querySelector("title")?.textContent || "Untitled";
-            const link = item.querySelector("link")?.textContent || 
-                        item.querySelector("link")?.getAttribute("href") || 
-                        item.getAttribute("rdf:about") || "#";
             
-            // Handle different date formats
-            let dateText = item.querySelector("pubDate")?.textContent || 
-                          item.querySelector("published")?.textContent ||
-                          item.querySelector("date")?.textContent ||
-                          item.querySelector("dc\\:date")?.textContent ||
-                          new Date().toISOString();
+            const data = await response.json();
             
-            return {
-                source: feed.name,
-                title: clean(title),
-                link: clean(link),
-                date: new Date(dateText)
-            };
-        });
+            // Handle different proxy response formats
+            const xmlText = data.contents || data.content || data;
+            if (!xmlText) {
+                throw new Error('Empty response from proxy');
+            }
+            
+            const parser = new DOMParser();
+            const xml = parser.parseFromString(xmlText, "text/xml");
 
-        allItems.push(...entries);
-        
-    } catch (e) {
-        console.error(`Failed to load ${feed.name}:`, e);
-        showError(`Failed to load ${feed.name}`);
+            // Check for parsing errors
+            if (xml.querySelector('parsererror')) {
+                throw new Error('XML parsing error');
+            }
+
+            // Handle different RSS formats
+            let items = xml.querySelectorAll("item");
+            if (items.length === 0) {
+                items = xml.querySelectorAll("entry"); // For Atom feeds
+            }
+
+            const entries = [...items].map(item => {
+                const title = item.querySelector("title")?.textContent || "Untitled";
+                const link = item.querySelector("link")?.textContent || 
+                            item.querySelector("link")?.getAttribute("href") || 
+                            "#";
+                
+                // Handle different date formats
+                let dateText = item.querySelector("pubDate")?.textContent || 
+                              item.querySelector("published")?.textContent ||
+                              item.querySelector("date")?.textContent ||
+                              new Date().toISOString();
+                
+                return {
+                    source: feed.name,
+                    title: clean(title),
+                    link: clean(link),
+                    date: new Date(dateText)
+                };
+            }).filter(item => item.title !== "Untitled");
+
+            allItems.push(...entries);
+            console.log(`Successfully loaded ${entries.length} articles from ${feed.name}`);
+            return entries;
+            
+        } catch (error) {
+            console.warn(`Proxy failed (${proxyUrl}):`, error.message);
+            // Continue to next proxy attempt
+        }
     }
+    
+    throw new Error('All proxy attempts failed');
 }
 
 /* --------------------
@@ -485,15 +623,23 @@ function updateLastUpdatedTime() {
 }
 
 function showError(message) {
-    const errorEl = document.createElement('div');
-    errorEl.className = 'error';
-    errorEl.textContent = message;
-    document.querySelector('.container').insertBefore(errorEl, document.getElementById('newsTable'));
+    showMessage(message, 'error');
+}
+
+function showSuccess(message) {
+    showMessage(message, 'success');
+}
+
+function showMessage(message, type) {
+    const messageEl = document.createElement('div');
+    messageEl.className = type;
+    messageEl.textContent = message;
+    document.querySelector('.container').insertBefore(messageEl, document.getElementById('newsTable'));
     
     // Remove after 5 seconds
     setTimeout(() => {
-        if (errorEl.parentNode) {
-            errorEl.remove();
+        if (messageEl.parentNode) {
+            messageEl.remove();
         }
     }, 5000);
 }
@@ -519,6 +665,20 @@ function processItems() {
     
     // Update loading state
     updateLoadingState();
+    
+    // Update load earlier button visibility
+    updateLoadEarlierButton();
+}
+
+function updateLoadEarlierButton() {
+    const loadEarlierBtn = document.getElementById('loadEarlierBtn');
+    
+    // Only show the button if we have items and there are more to load
+    if (filteredItems.length > batchSize && shown < filteredItems.length) {
+        loadEarlierBtn.style.display = 'inline-block';
+    } else {
+        loadEarlierBtn.style.display = 'none';
+    }
 }
 
 function updateSourceFilter() {
@@ -589,7 +749,6 @@ function clean(t) {
 -------------------- */
 function showMore() {
     const tbody = document.querySelector("#newsTable tbody");
-    const loadEarlierBtn = document.getElementById('loadEarlierBtn');
     
     for (let i = shown; i < shown + batchSize && i < filteredItems.length; i++) {
         const row = filteredItems[i];
@@ -607,12 +766,8 @@ function showMore() {
     }
     shown += batchSize;
     
-    // Show/hide load earlier button
-    if (shown >= filteredItems.length) {
-        loadEarlierBtn.style.display = 'none';
-    } else {
-        loadEarlierBtn.style.display = 'inline-block';
-    }
+    // Update load earlier button visibility
+    updateLoadEarlierButton();
 }
 
 function formatDate(date) {
@@ -658,7 +813,7 @@ async function loadMoreOnScroll() {
     scrollIndicator.style.display = 'block';
     
     // Simulate loading delay for better UX
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 300));
     
     // Load more items
     showMore();
@@ -683,7 +838,7 @@ async function loadEarlierArticles() {
     loadEarlierBtn.textContent = 'Loading...';
     
     // Simulate loading delay for better UX
-    await new Promise(resolve => setTimeout(resolve, 800));
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     // Load more items
     showMore();
