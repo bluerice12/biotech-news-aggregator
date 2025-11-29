@@ -5,164 +5,82 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pharma & Biotech News Aggregator</title>
 <style>
-    :root {
-        --bg: #121212;
-        --text: #e0e0e0;
-        --link: #90caf9;
-        --border: #333;
-        --header-bg: #1e1e1e;
-        --hover-bg: #2a2a2a;
-        --accent: #4a90e2;
-        --success: #4CAF50;
-        --warning: #ff9800;
-        --error: #f44336;
-    }
-    body {
-        font-family: 'Segoe UI', Arial, sans-serif;
-        margin: 0;
-        padding: 10px;
-        background: var(--bg);
-        color: var(--text);
-        line-height: 1.4;
-    }
-    .container {
-        max-width: 1200px;
-        margin: 0 auto;
-    }
-    header {
-        margin-bottom: 15px;
-        padding-bottom: 10px;
-        border-bottom: 1px solid var(--border);
-    }
-    h1 {
-        margin: 0 0 8px 0;
-        color: #fff;
-        font-weight: 600;
-        font-size: 1.8rem;
-    }
-    .status-bar {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 13px;
-        color: #aaa;
-        margin-bottom: 10px;
-    }
-    .last-updated {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-    .refresh-indicator {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-    }
-    .controls {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 15px;
-        flex-wrap: wrap;
-    }
-    #search, #sourceFilter {
-        padding: 8px 12px;
-        border: 1px solid var(--border);
-        border-radius: 4px;
-        background: var(--header-bg);
-        color: var(--text);
-        font-size: 13px;
-    }
-    #search { width: 200px; }
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 5px;
-    }
-    th, td {
-        padding: 6px 8px;
-        border-bottom: 1px solid var(--border);
-        text-align: left;
-    }
-    th {
-        background-color: var(--header-bg);
-        font-weight: 600;
-        position: sticky;
-        top: 0;
-        font-size: 13px;
-    }
-    tr:hover { background-color: var(--hover-bg); }
-    a {
-        color: var(--link);
-        text-decoration: none;
-        transition: color 0.2s;
-        font-size: 13px;
-    }
-    a:hover { color: #bbdefb; text-decoration: underline; }
-    .no-results {
-        text-align: center;
-        padding: 20px;
-        font-style: italic;
-        color: #aaa;
-        font-size: 13px;
-    }
-    .source-badge {
-        display: inline-block;
-        padding: 2px 6px;
-        border-radius: 3px;
-        font-size: 11px;
-        font-weight: 600;
-        background-color: #333;
-        color: #ddd;
-    }
-    .feed-status {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-bottom: 10px;
-        font-size: 12px;
-    }
-    .status-item {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        padding: 4px 8px;
-        border-radius: 12px;
-        background: var(--header-bg);
-    }
-    .status-dot {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-    }
-    .status-loading { background: var(--warning); }
-    .status-success { background: var(--success); }
-    .status-error { background: var(--error); }
-    /* Circular loader */
-    .loading-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        padding: 20px;
-    }
-    .spinner {
-        border: 4px solid rgba(255, 255, 255, 0.1);
-        border-top: 4px solid var(--accent);
-        border-radius: 50%;
-        width: 36px;
-        height: 36px;
-        animation: spin 1s linear infinite;
-    }
-    @keyframes spin {
-        0% { transform: rotate(0deg);}
-        100% { transform: rotate(360deg);}
-    }
-    @media (max-width: 768px) {
-        #search { width: 100%; }
-        table { font-size: 12px; }
-        th, td { padding: 4px 6px; }
-        .status-bar { flex-direction: column; align-items: flex-start; gap: 8px; }
-        .feed-status { flex-direction: column; }
-    }
+:root {
+    --bg: #121212;
+    --text: #e0e0e0;
+    --link: #90caf9;
+    --border: #333;
+    --header-bg: #1e1e1e;
+    --hover-bg: #2a2a2a;
+    --accent: #4a90e2;
+    --success: #4CAF50;
+    --warning: #ff9800;
+    --error: #f44336;
+}
+
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    margin: 0;
+    padding: 10px;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.4;
+}
+
+.container { max-width: 1200px; margin: 0 auto; }
+header { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+h1 { margin: 0 0 8px 0; color: #fff; font-weight: 600; font-size: 1.8rem; }
+
+.status-bar { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #aaa; margin-bottom: 10px; }
+.last-updated { display: flex; align-items: center; gap: 6px; }
+
+.controls { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+#search { padding: 8px 12px; border: 1px solid var(--border); border-radius: 4px; background: var(--header-bg); color: var(--text); width: 200px; font-size: 13px; }
+#sourceFilter { padding: 8px 12px; border: 1px solid var(--border); border-radius: 4px; background: var(--header-bg); color: var(--text); font-size: 13px; }
+
+table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+th, td { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; }
+th { background-color: var(--header-bg); font-weight: 600; position: sticky; top: 0; font-size: 13px; }
+tr:hover { background-color: var(--hover-bg); }
+a { color: var(--link); text-decoration: none; transition: color 0.2s; font-size: 13px; }
+a:hover { color: #bbdefb; text-decoration: underline; }
+
+.loading-container { display: flex; justify-content: center; align-items: center; padding: 20px; flex-direction: column; gap: 15px; }
+.spinner {
+    border: 5px solid var(--header-bg);
+    border-top: 5px solid var(--accent);
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+.no-results { text-align: center; padding: 20px; font-style: italic; color: #aaa; font-size: 13px; }
+
+.load-more { text-align: center; margin: 15px 0; }
+.load-more-btn {
+    padding: 8px 16px;
+    background-color: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background-color 0.2s;
+}
+.load-more-btn:hover { background-color: #3a7bd5; }
+.load-more-btn:disabled { background-color: #666; cursor: not-allowed; }
+
+.source-badge { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 11px; font-weight: 600; background-color: #333; color: #ddd; }
+
+@media (max-width: 768px) {
+    body { padding: 8px; }
+    .controls { flex-direction: column; gap: 8px; }
+    #search { width: 100%; }
+    table { font-size: 12px; }
+    th, td { padding: 4px 6px; }
+}
 </style>
 </head>
 <body>
@@ -174,18 +92,16 @@
                 <span>Last updated:</span>
                 <span id="lastUpdatedTime">--:--:--</span>
             </div>
-            <div class="refresh-indicator">
-                Auto-refresh every 5 minutes
-            </div>
         </div>
     </header>
-    <div id="feedStatus" class="feed-status"></div>
+
     <div class="controls">
         <input type="text" id="search" placeholder="Search articles...">
         <select id="sourceFilter">
             <option value="all">All Sources</option>
         </select>
     </div>
+
     <table id="newsTable">
         <thead>
             <tr>
@@ -196,8 +112,14 @@
         </thead>
         <tbody></tbody>
     </table>
+    
+    <div class="load-more">
+        <button id="loadEarlierBtn" class="load-more-btn" style="display: none;">Load Earlier Articles</button>
+    </div>
+    
     <div id="loading" class="loading-container">
         <div class="spinner"></div>
+        <div>Loading latest pharma and biotech news...</div>
     </div>
 </div>
 
@@ -206,7 +128,7 @@ const feeds = [
     { name: "Pharma Executive", url: "https://www.pharmexec.com/rss" },
     { name: "BioSpace", url: "https://www.biospace.com/index.rss" },
     { name: "Endpoints News", url: "https://endpts.com/feed/" },
-    { name: "Nature Biotech", url: "https://www.nature.com/nbt.rss" }
+    { name: "Nature Biotechnology", url: "https://www.nature.com/nbt.rss" }
 ];
 
 let allItems = [];
@@ -214,113 +136,180 @@ let filteredItems = [];
 let shown = 0;
 const batchSize = 25;
 let isLoading = false;
-let feedStatus = {};
 let lastUpdated = null;
+let feedLatestDate = {};
+let isFetching = false;
 
-function updateLastUpdatedTime() {
-    document.getElementById('lastUpdatedTime').textContent = lastUpdated ? lastUpdated.toLocaleTimeString() : '--:--:--';
+function getCachedFeeds() {
+    const cached = localStorage.getItem('cachedFeeds');
+    return cached ? JSON.parse(cached) : [];
 }
 
-function updateFeedStatus(name, status) {
-    feedStatus[name] = status;
-    const container = document.getElementById('feedStatus');
-    container.innerHTML = '';
-    Object.entries(feedStatus).forEach(([n, s]) => {
-        const item = document.createElement('div');
-        item.className = 'status-item';
-        const dot = document.createElement('div');
-        dot.className = `status-dot status-${s}`;
-        const text = document.createElement('span');
-        text.textContent = n;
-        item.appendChild(dot); item.appendChild(text); container.appendChild(item);
+function setCachedFeeds(data) {
+    localStorage.setItem('cachedFeeds', JSON.stringify(data));
+}
+
+function updateLastUpdatedTime() {
+    const timeEl = document.getElementById('lastUpdatedTime');
+    if (lastUpdated) timeEl.textContent = lastUpdated.toLocaleTimeString();
+}
+
+function clean(t) {
+    if (!t) return "";
+    return t.replace(/<!\[CDATA\[/g,"").replace(/\]\]>/g,"").replace(/&lt;/g,"<").replace(/&gt;/g,">")
+            .replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&apos;/g,"'")
+            .replace(/&#(\d+);/g,(m,d)=>String.fromCharCode(d)).trim();
+}
+
+async function loadSingleFeed(feed) {
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(feed.url)}`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(()=>controller.abort(), 8000);
+    try {
+        const resp = await fetch(proxyUrl, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        const xmlText = data.contents || data;
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(xmlText,"text/xml");
+        if (xml.querySelector('parsererror')) throw new Error('XML parsing error');
+
+        let items = xml.querySelectorAll("item");
+        if (items.length===0) items = xml.querySelectorAll("entry");
+
+        const lastDate = feedLatestDate[feed.name] ? new Date(feedLatestDate[feed.name]) : new Date(0);
+        const entries = Array.from(items).map(item=>{
+            const title = clean(item.querySelector("title")?.textContent || "Untitled");
+            const link = item.querySelector("link")?.textContent || item.querySelector("link")?.getAttribute("href") || "#";
+            const dateText = item.querySelector("pubDate")?.textContent || item.querySelector("published")?.textContent || new Date().toISOString();
+            const date = new Date(dateText);
+            return { source: feed.name, title, link, date };
+        }).filter(e=>e.date>lastDate);
+        if(entries.length>0) feedLatestDate[feed.name] = entries[0].date.toISOString();
+        return entries;
+    } catch(e) {
+        console.error(feed.name, e);
+        return [];
+    }
+}
+
+async function refreshFeeds() {
+    if(isFetching) return;
+    isFetching = true;
+    document.getElementById('loading').style.display = 'flex';
+    for(let feed of feeds){
+        const newItems = await loadSingleFeed(feed);
+        if(newItems.length>0){
+            allItems.unshift(...newItems);
+        }
+    }
+    allItems.sort((a,b)=>b.date-a.date);
+    setCachedFeeds(allItems);
+    lastUpdated = new Date();
+    updateLastUpdatedTime();
+    processItems();
+    document.getElementById('loading').style.display = 'none';
+    isFetching = false;
+}
+
+function processItems() {
+    updateSourceFilter();
+    applyFilters();
+    shown=0;
+    document.querySelector("#newsTable tbody").innerHTML='';
+    showMore();
+    updateLoadEarlierButton();
+}
+
+function updateSourceFilter() {
+    const sourceFilter = document.getElementById('sourceFilter');
+    while(sourceFilter.children.length>1) sourceFilter.removeChild(sourceFilter.lastChild);
+    const sources = [...new Set(allItems.map(i=>i.source))];
+    sources.forEach(src=>{
+        const option = document.createElement('option');
+        option.value=src; option.textContent=src;
+        sourceFilter.appendChild(option);
     });
+}
+
+function applyFilters() {
+    const searchTerm = document.getElementById('search').value.toLowerCase();
+    const sourceFilter = document.getElementById('sourceFilter').value;
+    filteredItems = allItems.filter(i=>{
+        return (sourceFilter==='all'||i.source===sourceFilter) && i.title.toLowerCase().includes(searchTerm);
+    });
+    const tbody = document.querySelector("#newsTable tbody");
+    const noRes = document.querySelector('.no-results');
+    if(noRes) noRes.remove();
+    if(filteredItems.length===0){
+        const div = document.createElement('div');
+        div.className='no-results';
+        div.textContent='No articles match your search criteria.';
+        tbody.parentNode.insertBefore(div,tbody.nextSibling);
+    }
 }
 
 function showMore() {
     const tbody = document.querySelector("#newsTable tbody");
-    for (let i = shown; i < shown + batchSize && i < filteredItems.length; i++) {
+    for(let i=shown;i<shown+batchSize && i<filteredItems.length;i++){
         const row = filteredItems[i];
         const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td><span class="source-badge">${row.source}</span></td>
-            <td><a href="${row.link}" target="_blank">${row.title}</a></td>
-            <td>${formatDate(row.date)}</td>
-        `;
+        tr.innerHTML=`<td><span class="source-badge">${row.source}</span></td>
+                      <td><a href="${row.link}" target="_blank">${row.title}</a></td>
+                      <td>${formatDate(row.date)}</td>`;
         tbody.appendChild(tr);
     }
-    shown += batchSize;
+    shown+=batchSize;
+    updateLoadEarlierButton();
 }
 
-function formatDate(date) {
+function formatDate(date){
     const now = new Date();
-    const diffMins = Math.floor((now - date) / (1000*60));
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-    if(diffMins < 60) return `${diffMins}m ago`;
-    else if(diffHours < 24) return `${diffHours}h ago`;
-    else if(diffDays === 1) return 'Yesterday';
-    else if(diffDays < 7) return `${diffDays}d ago`;
-    else return date.toLocaleDateString();
+    const diffMins = Math.floor((now-date)/(1000*60));
+    if(diffMins<60) return diffMins+'m ago';
+    const diffHours = Math.floor(diffMins/60);
+    if(diffHours<24) return diffHours+'h ago';
+    const diffDays = Math.floor(diffHours/24);
+    if(diffDays===1) return 'Yesterday';
+    if(diffDays<7) return diffDays+'d ago';
+    return date.toLocaleDateString();
 }
 
-function clean(t) {
-    if(!t) return '';
-    return t.replace(/<!\[CDATA\[/g,'').replace(/\]\]>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&apos;/g,"'").trim();
+function updateLoadEarlierButton(){
+    const btn = document.getElementById('loadEarlierBtn');
+    btn.style.display = (filteredItems.length>batchSize && shown<filteredItems.length)?'inline-block':'none';
 }
 
-async function loadSingleFeed(feed) {
-    updateFeedStatus(feed.name,'loading');
-    try {
-        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(feed.url)}`;
-        const response = await fetch(proxyUrl);
-        if(!response.ok) throw new Error(`HTTP ${response.status}`);
-        const xmlText = await response.text();
-        const parser = new DOMParser();
-        const xml = parser.parseFromString(xmlText,"text/xml");
-        if(xml.querySelector('parsererror')) throw new Error('XML parse error');
-
-        let items = xml.querySelectorAll('item');
-        if(items.length===0) items = xml.querySelectorAll('entry');
-
-        const entries = Array.from(items).slice(0,50).map(item=>{
-            const title = clean(item.querySelector('title')?.textContent || 'Untitled');
-            const link = item.querySelector('link')?.textContent || item.querySelector('link')?.getAttribute('href') || '#';
-            const dateText = item.querySelector('pubDate')?.textContent || item.querySelector('published')?.textContent || new Date().toISOString();
-            return { source: feed.name, title, link, date: new Date(dateText) };
-        }).filter(e=>e.title!=='Untitled');
-
-        allItems.push(...entries);
-        filteredItems = [...allItems].sort((a,b)=>b.date - a.date);
-        showMore();
-        updateFeedStatus(feed.name,'success');
-    } catch(e){
-        console.error(`Feed error: ${feed.name}`, e);
-        updateFeedStatus(feed.name,'error');
-    }
+async function loadEarlierArticles(){
+    if(isFetching || shown>=filteredItems.length) return;
+    const btn = document.getElementById('loadEarlierBtn');
+    btn.disabled=true; btn.textContent='Loading...';
+    await new Promise(r=>setTimeout(r,200));
+    showMore();
+    btn.disabled=false; btn.textContent='Load Earlier Articles';
 }
 
-async function loadFeeds() {
-    document.getElementById('loading').style.display='flex';
-    await Promise.all(feeds.map(feed=>loadSingleFeed(feed)));
-    lastUpdated = new Date(); updateLastUpdatedTime();
-    document.getElementById('loading').style.display='none';
+document.getElementById('search').addEventListener('input',processItems);
+document.getElementById('sourceFilter').addEventListener('change',processItems);
+document.getElementById('loadEarlierBtn').addEventListener('click',loadEarlierArticles);
+
+function setupInfiniteScroll(){
+    window.addEventListener('scroll',()=>{
+        if(window.innerHeight+window.scrollY>=document.body.offsetHeight-500){
+            showMore();
+        }
+    });
 }
-
-document.getElementById('search').addEventListener('input',()=>{
-    const term = document.getElementById('search').value.toLowerCase();
-    filteredItems = allItems.filter(i=>i.title.toLowerCase().includes(term));
-    shown = 0; document.querySelector("#newsTable tbody").innerHTML=''; showMore();
-});
-
-document.getElementById('sourceFilter').addEventListener('change',()=>{
-    const src = document.getElementById('sourceFilter').value;
-    filteredItems = allItems.filter(i=>src==='all'||i.source===src);
-    shown = 0; document.querySelector("#newsTable tbody").innerHTML=''; showMore();
-});
 
 // Initialize
-loadFeeds();
+allItems = getCachedFeeds();
+processItems();
+setupInfiniteScroll();
+refreshFeeds();
+
+// Background refresh every 5 minutes
+setInterval(refreshFeeds,5*60*1000);
 </script>
 </body>
 </html>
-
