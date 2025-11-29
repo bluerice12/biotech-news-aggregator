@@ -1,89 +1,165 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Minimal News Aggregator</title>
-  <style>
-    body { font-family: sans-serif; margin: 20px; line-height: 1.4; }
-    h1 { font-size: 22px; margin-bottom: 10px; }
-    h2 { font-size: 18px; margin-top: 30px; }
-    ul { padding-left: 18px; }
-    li { margin-bottom: 6px; }
-    .timestamp { color: #666; font-size: 12px; margin-left: 6px; }
-  </style>
+<meta charset="UTF-8">
+<title>Minimal Pharma News Aggregator</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background: var(--bg);
+        color: var(--text);
+        transition: 0.3s;
+    }
+    h1 { margin-bottom: 15px; }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+    th, td {
+        padding: 8px;
+        border-bottom: 1px solid var(--border);
+    }
+    a { color: var(--link); }
+    #toggleDark {
+        padding: 6px 12px;
+        margin-bottom: 15px;
+        cursor: pointer;
+    }
+</style>
 </head>
+
 <body>
-  <h1>Minimal News Aggregator</h1>
-  <div id="content">Loading...</div>
 
-  <script>
-    const feeds = [
-      { name: "Fierce Pharma", url: "https://api.rss2json.com/v1/api.json?rss_url=https://www.fiercepharma.com/rss" },
-      { name: "Pharma Executive", url: "https://api.rss2json.com/v1/api.json?rss_url=https://www.pharmexec.com/rss" },
-      { name: "BioSpace", url: "https://api.rss2json.com/v1/api.json?rss_url=https://www.biospace.com/rss/" },
-      { name: "PhRMA", url: "https://api.rss2json.com/v1/api.json?rss_url=https://www.phrma.org/feed" },
-      { name: "Fierce Biotech", url: "https://api.rss2json.com/v1/api.json?rss_url=https://www.fiercebiotech.com/rss" }
-    ];
+<h1>Pharma & Biotech News</h1>
+<button id="toggleDark">Toggle Dark Mode</button>
 
-    function parseDate(d) {
-      if (!d) return "";
-      const dt = new Date(d);
-      if (isNaN(dt)) return "";
-      return dt.toLocaleString();
+<table id="newsTable">
+    <thead>
+        <tr>
+            <th>Source</th>
+            <th>Title</th>
+            <th>Date</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<script>
+/* --------------------
+   DARK MODE
+-------------------- */
+const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+let dark = prefersDark;
+
+function applyTheme() {
+    if (dark) {
+        document.documentElement.style.setProperty("--bg", "#121212");
+        document.documentElement.style.setProperty("--text", "#e0e0e0");
+        document.documentElement.style.setProperty("--link", "#90caf9");
+        document.documentElement.style.setProperty("--border", "#333");
+    } else {
+        document.documentElement.style.setProperty("--bg", "#ffffff");
+        document.documentElement.style.setProperty("--text", "#000000");
+        document.documentElement.style.setProperty("--link", "#0066cc");
+        document.documentElement.style.setProperty("--border", "#ccc");
     }
+}
+document.getElementById("toggleDark").onclick = () => { dark = !dark; applyTheme(); };
+applyTheme();
 
-    async function loadFeeds() {
-      const allArticles = [];
+/* --------------------
+   RSS SOURCES
+-------------------- */
+const feeds = [
+    { name: "FiercePharma", url: "https://www.fiercepharma.com/rss.xml" },
+    { name: "FierceBiotech", url: "https://www.fiercebiotech.com/rss.xml" },
+    { name: "BioSpace", url: "https://www.biospace.com/rss/breaking-news" },
+    { name: "Pharma Executive", url: "https://www.pharmexec.com/rss" },
+    { name: "PhRMA", url: "https://www.phrma.org/rss" }
+];
 
-      for (const feed of feeds) {
+/* Better proxy because rss2json fails often */
+function proxy(url) {
+    return `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+}
+
+let allItems = [];
+let shown = 0;
+const batchSize = 20;
+
+/* --------------------
+   LOAD ALL FEEDS
+-------------------- */
+async function loadFeeds() {
+    for (const f of feeds) {
         try {
-          const res = await fetch(feed.url);
-          const data = await res.json();
+            const res = await fetch(proxy(f.url));
+            const data = await res.json();
+            const parser = new DOMParser();
+            const xml = parser.parseFromString(data.contents, "text/xml");
 
-          data.items.forEach(item => {
-            allArticles.push({
-              source: feed.name,
-              title: item.title,
-              link: item.link,
-              published: item.pubDate || item.published || "",
-            });
-          });
+            const entries = [...xml.querySelectorAll("item")].map(item => ({
+                source: f.name,
+                title: clean(item.querySelector("title")?.textContent || "Untitled"),
+                link: item.querySelector("link")?.textContent,
+                date: new Date(item.querySelector("pubDate")?.textContent)
+            }));
+
+            allItems.push(...entries);
+
         } catch (e) {
-          console.error("Error loading:", feed.name);
+            console.log("Failed:", f.name, e);
         }
-      }
-
-      allArticles.sort((a, b) => new Date(b.published) - new Date(a.published));
-
-      const container = document.getElementById("content");
-      container.innerHTML = "";
-
-      const section = document.createElement("div");
-      const list = document.createElement("ul");
-
-      allArticles.slice(0, 50).forEach(item => {
-        const li = document.createElement("li");
-        const a = document.createElement("a");
-        a.href = item.link;
-        a.textContent = `[${item.source}] ${item.title}`;
-        a.target = "_blank";
-
-        const ts = document.createElement("span");
-        ts.className = "timestamp";
-        ts.textContent = parseDate(item.published);
-
-        li.appendChild(a);
-        li.appendChild(ts);
-        list.appendChild(li);
-      });
-
-      section.appendChild(list);
-      container.appendChild(section);
     }
 
-    loadFeeds();
-    setInterval(loadFeeds, 5 * 60 * 1000);
-  </script>
+    allItems.sort((a, b) => b.date - a.date);
+    showMore();
+}
+
+/* --------------------
+   CLEAN TITLES
+-------------------- */
+function clean(t) {
+    return t
+        .replace(/<!\[CDATA\[/g, "")
+        .replace(/\]\]>/g, "")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&amp;/g, "&")
+        .trim();
+}
+
+/* --------------------
+   RENDER 20 ITEMS AT A TIME
+-------------------- */
+function showMore() {
+    const tbody = document.querySelector("#newsTable tbody");
+    for (let i = shown; i < shown + batchSize && i < allItems.length; i++) {
+        const row = allItems[i];
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${row.source}</td>
+            <td><a href="${row.link}" target="_blank">${row.title}</a></td>
+            <td>${row.date.toLocaleString()}</td>
+        `;
+        tbody.appendChild(tr);
+    }
+    shown += batchSize;
+}
+
+/* --------------------
+   INFINITE SCROLL
+-------------------- */
+window.addEventListener("scroll", () => {
+    if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 200) {
+        showMore();
+    }
+});
+
+loadFeeds();
+</script>
+
 </body>
 </html>
